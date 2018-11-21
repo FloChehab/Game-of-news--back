@@ -17,7 +17,7 @@ django-heroku = "*"
 gunicorn = "*"
 django-proxy = "*"
 django-cors-headers = "*"
-
+pandas = "*"
 
 [dev-packages]
 

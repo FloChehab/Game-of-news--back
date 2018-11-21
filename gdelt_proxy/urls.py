@@ -16,16 +16,17 @@ Including another URLconf
 
 from django.urls import re_path
 from proxy.views import proxy_view
-
 from django.views.decorators.csrf import csrf_exempt
+from gdelt_proxy.merge_view import merge_view
 
 
 @csrf_exempt
-def my_view(request, url):
+def my_proxy_view(request, url):
     remoteurl = 'http://data.gdeltproject.org/' + url
     return proxy_view(request, remoteurl)
 
 
 urlpatterns = [
-    re_path(r'proxy/(?P<url>.*)', my_view)
+    re_path(r'proxy/(?P<url>.*)', my_proxy_view),
+    re_path(r'proxy-merge/(?P<date_str>.*)', merge_view)
 ]
