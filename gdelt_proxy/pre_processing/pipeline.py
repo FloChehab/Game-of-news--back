@@ -57,7 +57,7 @@ def pre_propress(full_df: pd.DataFrame) -> Tuple[pd.DataFrame, pd.DataFrame, pd.
 def run_pipeline(**kwargs) -> Dict:
     if settings.OFF_LINE_PREPROCESSING:
         full_df = pd.read_csv(
-            path.join(settings.BASE_DIR, 'ex_GBQ_res.csv'))
+            path.join(settings.BASE_DIR, 'datasets/ex_GBQ_res.csv'))
     else:
         full_df = query_google_BQ(**kwargs)
 

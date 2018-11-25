@@ -17,7 +17,7 @@ import django_heroku
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
 
-OFF_LINE_PREPROCESSING = True
+OFF_LINE_PREPROCESSING = False
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/2.0/howto/deployment/checklist/
@@ -26,7 +26,7 @@ OFF_LINE_PREPROCESSING = True
 SECRET_KEY = "m=(=ddmoeoy&_!&k(qz!h1-rn!7cjk^%s8vm54q^ljeud__7dz"
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = False
 
 # Application definition
 

@@ -14,9 +14,11 @@ Including another URLconf
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 
+from django.conf import settings
 from django.http import JsonResponse
 from django.urls import re_path
 from django.views.decorators.csrf import csrf_exempt
+from google.cloud import bigquery
 from proxy.views import proxy_view
 
 from gdelt_proxy.merge_view import merge_view
@@ -35,8 +37,21 @@ def query_view(request):
     return JsonResponse(run_pipeline())
 
 
+@csrf_exempt
+def gbq_active(request):
+    if settings.OFF_LINE_PREPROCESSING:
+        return JsonResponse(dict(active=False, msg="Deactivated in site config"))
+
+    try:
+        c = bigquery.Client()
+        return JsonResponse(dict(active=True))
+    except:
+        return JsonResponse(dict(active=False, msg="Couldn't connect to Google Big Query"))
+
+
 urlpatterns = [
     re_path(r'proxy/(?P<url>.*)', my_proxy_view),
     re_path(r'proxy-merge/(?P<date_str>.*)', merge_view),
-    re_path('query', query_view)
+    re_path('query', query_view),
+    re_path('is_gbq_active', gbq_active)
 ]
