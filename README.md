@@ -1,49 +1,16 @@
-# Heroku Django Starter Template
+Game of News -- back
+=========
 
-An utterly fantastic project starter template for Django 2.0.
+Backend application for the [Game of News application](https://github.com/FloChehab/Game-of-news).
 
-## Features
+## Set-up
 
-- Production-ready configuration for Static Files, Database Settings, Gunicorn, etc.
-- Enhancements to Django's static file serving functionality via WhiteNoise.
-- Latest Python 3.6 runtime environment.
+This is a simple django application, ready to deploy on Heroku.
 
-## How to Use
+To add the support for live Google Big Querry, you need to [get your IDs](https://cloud.google.com/bigquery/docs/reference/libraries#client-libraries-usage-python). Then, copy-paste the JSON file to the root of the project, rename it to `google_cloud_id.json` and run the following command.
 
-To use this project, follow these steps:
+```sh
+export GOOGLE_APPLICATION_CREDENTIALS=`pwd`/google_cloud_id.json
+```
 
-1. Create your working environment.
-2. Install Django (`$ pipenv install django`)
-3. Create a new project using this template
-
-## Creating Your Project
-
-Using this template to create a new Django app is easy::
-
-    $ django-admin.py startproject --template=https://github.com/heroku/heroku-django-template/archive/master.zip --name=Procfile helloworld
-
-(If this doesn't work on windows, replace `django-admin.py` with `django-admin`)
-
-You can replace ``helloworld`` with your desired project name.
-
-## Deployment to Heroku
-
-    $ git init
-    $ git add -A
-    $ git commit -m "Initial commit"
-
-    $ heroku create
-    $ git push heroku master
-
-    $ heroku run python manage.py migrate
-
-See also, a [ready-made application](https://github.com/heroku/python-getting-started), ready to deploy.
-
-
-## License: MIT
-
-## Further Reading
-
-- [Gunicorn](https://warehouse.python.org/project/gunicorn/)
-- [WhiteNoise](https://warehouse.python.org/project/whitenoise/)
-- [dj-database-url](https://warehouse.python.org/project/dj-database-url/)
+*(The python scripts need to have access to that environement variable)*

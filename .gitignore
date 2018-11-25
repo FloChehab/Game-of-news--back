@@ -4,3 +4,7 @@ staticfiles
 .env
 *.sqlite3
 .vscode
+google_cloud_id.json
+ex_GBQ_res.csv
+.ipynb_checkpoints
+*.ipynb

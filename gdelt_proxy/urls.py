@@ -14,10 +14,13 @@ Including another URLconf
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 
+from django.http import JsonResponse
 from django.urls import re_path
-from proxy.views import proxy_view
 from django.views.decorators.csrf import csrf_exempt
+from proxy.views import proxy_view
+
 from gdelt_proxy.merge_view import merge_view
+from gdelt_proxy.pre_processing.pipeline import run_pipeline
 
 
 @csrf_exempt
@@ -26,7 +29,14 @@ def my_proxy_view(request, url):
     return proxy_view(request, remoteurl)
 
 
+@csrf_exempt
+def query_view(request):
+    # TODO take parameters into account
+    return JsonResponse(run_pipeline())
+
+
 urlpatterns = [
     re_path(r'proxy/(?P<url>.*)', my_proxy_view),
-    re_path(r'proxy-merge/(?P<date_str>.*)', merge_view)
+    re_path(r'proxy-merge/(?P<date_str>.*)', merge_view),
+    re_path('query', query_view)
 ]
