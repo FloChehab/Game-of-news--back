@@ -11,7 +11,6 @@ TASKS = [ExTask]
 # Check the tasks are correctly set up
 test = []
 for task in TASKS:
-    print(task)
     task_name = task.task_name
     assert task_name is not None, "You forget to set the task name..."
     assert task_name not in test, "task_name already taken, change it"
@@ -27,6 +26,10 @@ def pre_propress(full_df: pd.DataFrame) -> Tuple[pd.DataFrame, pd.DataFrame, pd.
     Returns:
         Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame] -- [returns the 3 df the Task.run function should accept]
     """
+
+    # convert date
+    for col in ['mentionDateAdded', 'eventDateAdded']:
+        full_df[col] = pd.to_datetime(full_df[col], format="%Y%m%d%H%M%S")
 
     event_cols = [col for col in full_df.columns if 'event' in col.lower()]
     mention_cols = [col for col in full_df.columns if 'mention' in col.lower()]

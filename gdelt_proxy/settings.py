@@ -26,7 +26,7 @@ OFF_LINE_PREPROCESSING = False
 SECRET_KEY = "m=(=ddmoeoy&_!&k(qz!h1-rn!7cjk^%s8vm54q^ljeud__7dz"
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = False
+DEBUG = True
 
 # Application definition
 

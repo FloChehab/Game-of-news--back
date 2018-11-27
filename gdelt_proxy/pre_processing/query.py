@@ -2,8 +2,8 @@ import pandas as pd
 from google.cloud import bigquery
 
 
-def query_google_BQ(date_begin="2018-11-21 00:00:00",
-                    date_end="2018-11-22 00:00:00",
+def query_google_BQ(date_begin="2018-11-21T00:00:00.000Z",
+                    date_end="2018-11-22T00:00:00.000Z",
                     minimum_distinct_source_count=10,
                     confidence=100,
                     limit=1000000) -> pd.DataFrame:

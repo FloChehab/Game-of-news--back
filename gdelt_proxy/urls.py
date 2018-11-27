@@ -14,8 +14,11 @@ Including another URLconf
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 
+import datetime
+import simplejson
+
 from django.conf import settings
-from django.http import JsonResponse
+from django.http import HttpResponse
 from django.urls import re_path
 from django.views.decorators.csrf import csrf_exempt
 from google.cloud import bigquery
@@ -23,6 +26,26 @@ from proxy.views import proxy_view
 
 from gdelt_proxy.merge_view import merge_view
 from gdelt_proxy.pre_processing.pipeline import run_pipeline
+
+
+class JsonResponse(HttpResponse):
+    """
+        JSON response | there is one in django
+        But not good for handling nan
+    """
+    @classmethod
+    def datetime_handler(cls, x):
+        if isinstance(x, datetime.datetime):
+            return x.isoformat()  # TODO might need to change this
+        raise TypeError("Unknown type")
+
+    def __init__(self, content, content_type='application/json', status=None):
+        super(JsonResponse, self).__init__(
+            content=simplejson.dumps(
+                content, ignore_nan=True, default=self.datetime_handler),
+            content_type=content_type,
+            status=status,
+        )
 
 
 @csrf_exempt
@@ -33,8 +56,10 @@ def my_proxy_view(request, url):
 
 @csrf_exempt
 def query_view(request):
-    # TODO take parameters into account
-    return JsonResponse(run_pipeline())
+    request_param = dict()
+    if len(request.body) != 0:
+        request_param = simplejson.loads(request.body)
+    return JsonResponse(run_pipeline(**request_param))
 
 
 @csrf_exempt
