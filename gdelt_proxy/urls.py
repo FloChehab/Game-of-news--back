@@ -74,9 +74,15 @@ def gbq_active(request):
         return JsonResponse(dict(active=False, msg="Couldn't connect to Google Big Query"))
 
 
+@csrf_exempt
+def server_active(request):
+    return JsonResponse(dict(active=True))
+
+
 urlpatterns = [
     re_path(r'proxy/(?P<url>.*)', my_proxy_view),
     re_path(r'proxy-merge/(?P<date_str>.*)', merge_view),
     re_path('query', query_view),
-    re_path('is_gbq_active', gbq_active)
+    re_path('is_gbq_active', gbq_active),
+    re_path('is_server_active', server_active)
 ]
