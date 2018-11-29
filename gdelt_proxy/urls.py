@@ -8,7 +8,6 @@ from django.urls import re_path
 from django.views.decorators.csrf import csrf_exempt
 from google.cloud import bigquery
 
-from gdelt_proxy.merge_view import merge_view
 from gdelt_proxy.pre_processing.json import json_dumps, json_to_dict
 from gdelt_proxy.pre_processing.pipeline import run_pipeline
 
