@@ -1,73 +1,40 @@
-from typing import Dict, Tuple
-from gdelt_proxy.pre_processing.query import query_google_BQ
-from gdelt_proxy.pre_processing.ex_task import ExTask
-from django.conf import settings
-import pandas as pd
 from os import path
+from os.path import exists, join
+from typing import Dict, Tuple
 
-# Put your new preprocessing task in the list
-TASKS = [ExTask]
+import pandas as pd
+import simplejson
+from django.conf import settings
 
-# Check the tasks are correctly set up
-test = []
-for task in TASKS:
-    task_name = task.task_name
-    assert task_name is not None, "You forget to set the task name..."
-    assert task_name not in test, "task_name already taken, change it"
-    test.append(task_name)
+from gdelt_proxy.pre_processing.ex_task import ExTask
+from gdelt_proxy.pre_processing.json import dict_to_json_file, json_to_dict
+from gdelt_proxy.pre_processing.query import (query_google_BQ,
+                                              query_params_to_id)
+from gdelt_proxy.pre_processing.run_dataset_pipeline import \
+    run_dataset_pipeline
 
-
-def pre_propress(full_df: pd.DataFrame) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
-    """Separated function for offline test in notebook mainly
-
-    Arguments:
-        full_df {pd.DataFrame}
-
-    Returns:
-        Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame] -- [returns the 3 df the Task.run function should accept]
-    """
-
-    # convert date
-    for col in ['mentionDateAdded', 'eventDateAdded']:
-        full_df[col] = pd.to_datetime(full_df[col], format="%Y%m%d%H%M%S")
-
-    event_cols = [col for col in full_df.columns if 'event' in col.lower()]
-    mention_cols = [col for col in full_df.columns if 'mention' in col.lower()]
-
-    events_df = full_df[event_cols] \
-        .groupby(by='eventId') \
-        .first() \
-        .reset_index()
-
-    mentions_df = full_df[['eventId'] + mention_cols]
-
-    # df_source_id is a dataframe with two columns:
-    #   - MentionIdentifier (the url to the article)
-    #   - mentionId a unique number for each MentionIdentifier (takes less storage)
-    # df_mentions_id = full_df.MentionIdentifier \
-    #     .value_counts() \
-    #     .reset_index()['index'] \
-    #     .reset_index() \
-    #     .rename(columns={'index': 'MentionIdentifier', 'level_0': 'mentionId'})
-
-    # df_GBQ = full_df \
-    #     .merge(df_mentions_id, on='MentionIdentifier') \
-    #     .drop('MentionIdentifier', axis=1)
-
-    return full_df, events_df, mentions_df
+CACHED_QUERIES_PIPELINES_DIR = join(
+    settings.BASE_DIR, 'cached_queries_pipelines')
 
 
 def run_pipeline(**kwargs) -> Dict:
+    # First we check if a pipeline wasn't already run for that query
+    cached_fp = query_params_to_id(**kwargs)
+    cached_fp = join(CACHED_QUERIES_PIPELINES_DIR, cached_fp + '.json')
+
+    if settings.CACHE_PIPELINES:
+        if exists(cached_fp):
+            return json_to_dict(cached_fp)
+
     if settings.OFF_LINE_PREPROCESSING:
         full_df = pd.read_csv(
             path.join(settings.BASE_DIR, 'datasets/ex_GBQ_res.csv'))
     else:
         full_df = query_google_BQ(**kwargs)
 
-    full_df, events_df, mentions_df = pre_propress(full_df)
+    processed = run_dataset_pipeline(full_df)
 
-    res = dict()
-    for task in TASKS:
-        res[task.task_name] = task.run(full_df, events_df, mentions_df)
+    if settings.CACHE_PIPELINES:
+        dict_to_json_file(processed, cached_fp)
 
-    return res
+    return processed

@@ -1,12 +1,18 @@
 import pandas as pd
 from google.cloud import bigquery
 
+DATE_BEGIN_DEFAULT = "2018-11-21T00:00:00.000Z"
+DATE_END_DEFAULT = "2018-11-22T00:00:00.000Z"
+MINIMUM_DISTINCT_SOURCE_COUNT_DEFAULT = 10
+CONFIDENCE_DEFAULT = 100
+LIMIT_DEFAULT = 100000
 
-def query_google_BQ(date_begin="2018-11-21T00:00:00.000Z",
-                    date_end="2018-11-22T00:00:00.000Z",
-                    minimum_distinct_source_count=10,
-                    confidence=100,
-                    limit=1000000) -> pd.DataFrame:
+
+def query_google_BQ(date_begin=DATE_BEGIN_DEFAULT,
+                    date_end=DATE_END_DEFAULT,
+                    minimum_distinct_source_count=MINIMUM_DISTINCT_SOURCE_COUNT_DEFAULT,
+                    confidence=CONFIDENCE_DEFAULT,
+                    limit=LIMIT_DEFAULT) -> pd.DataFrame:
 
     sql_query = """
     WITH
@@ -97,3 +103,15 @@ def query_google_BQ(date_begin="2018-11-21T00:00:00.000Z",
     query_job = client.query(sql_query)
     results = query_job.result()
     return results.to_dataframe()
+
+
+def query_params_to_id(date_begin=DATE_BEGIN_DEFAULT,
+                       date_end=DATE_END_DEFAULT,
+                       minimum_distinct_source_count=MINIMUM_DISTINCT_SOURCE_COUNT_DEFAULT,
+                       confidence=CONFIDENCE_DEFAULT,
+                       limit=LIMIT_DEFAULT) -> str:
+    return "{db}|{de}|{mdsc}|{conf}|{limit}".format(db=date_begin,
+                                                    de=date_end,
+                                                    mdsc=minimum_distinct_source_count,
+                                                    conf=confidence,
+                                                    limit=limit)

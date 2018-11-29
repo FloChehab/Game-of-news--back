@@ -7,3 +7,9 @@ staticfiles
 google_cloud_id.json
 .ipynb_checkpoints
 *.ipynb
+
+datasets
+datasets.zip
+datasets_pipelines
+
+cached_queries_pipelines

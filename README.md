@@ -42,6 +42,20 @@ Before your run the server for the first time, you should run this command:
 python ./manage.py migrate
 ```
 
+There are also diffent files that need to be set-up to handle custom datasets and query results caching:
+
+```sh
+python ./set_up.py 
+```
+This script should run without any errors and you should see the message `All systems are ready` at the end.
+
+To see available parameters for this script, run:
+
+```sh
+python ./set_up.py --help
+```
+
+
 ## Running locally
 
 To run the server locally, use the following command:

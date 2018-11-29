@@ -1,30 +1,15 @@
-"""gdelt_proxy URL Configuration
-
-The `urlpatterns` list routes URLs to views. For more information please see:
-    https://docs.djangoproject.com/en/2.0/topics/http/urls/
-Examples:
-Function views
-    1. Add an import:  from my_app import views
-    2. Add a URL to urlpatterns:  path('', views.home, name='home')
-Class-based views
-    1. Add an import:  from other_app.views import Home
-    2. Add a URL to urlpatterns:  path('', Home.as_view(), name='home')
-Including another URLconf
-    1. Import the include() function: from django.urls import include, path
-    2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
-"""
-
 import datetime
-import simplejson
+from os.path import exists, join
 
+import simplejson
 from django.conf import settings
-from django.http import HttpResponse
+from django.http import Http404, HttpResponse
 from django.urls import re_path
 from django.views.decorators.csrf import csrf_exempt
 from google.cloud import bigquery
-from proxy.views import proxy_view
 
 from gdelt_proxy.merge_view import merge_view
+from gdelt_proxy.pre_processing.json import json_dumps, json_to_dict
 from gdelt_proxy.pre_processing.pipeline import run_pipeline
 
 
@@ -33,29 +18,21 @@ class JsonResponse(HttpResponse):
         JSON response | there is one in django
         But not good for handling nan
     """
-    @classmethod
-    def datetime_handler(cls, x):
-        if isinstance(x, datetime.datetime):
-            return x.isoformat()  # TODO might need to change this
-        raise TypeError("Unknown type")
 
     def __init__(self, content, content_type='application/json', status=None):
         super(JsonResponse, self).__init__(
-            content=simplejson.dumps(
-                content, ignore_nan=True, default=self.datetime_handler),
+            content=json_dumps(content),
             content_type=content_type,
             status=status,
         )
 
 
 @csrf_exempt
-def my_proxy_view(request, url):
-    remoteurl = 'http://data.gdeltproject.org/' + url
-    return proxy_view(request, remoteurl)
-
-
-@csrf_exempt
 def query_view(request):
+    """View that returns the json dict fith the preprocessed data 
+        corresponding to the GBQ parameters in the request    
+    """
+
     request_param = dict()
     if len(request.body) != 0:
         request_param = simplejson.loads(request.body)
@@ -63,7 +40,26 @@ def query_view(request):
 
 
 @csrf_exempt
+def dataset_view(request, dataset_name):
+    """View that return a preprocessed dataset
+        Dataset_name should countain '.json'
+
+    Raises:
+        Http404 -- If file note found
+    """
+
+    fp = join(settings.BASE_DIR, 'datasets_pipelines', dataset_name)
+    if exists(fp):
+        return JsonResponse(json_to_dict(fp))
+    else:
+        raise Http404("Dataset doesn't exist on server")
+
+
+@csrf_exempt
 def gbq_active(request):
+    """View to know if GBQ connection is working on the server
+    """
+
     if settings.OFF_LINE_PREPROCESSING:
         return JsonResponse(dict(active=False, msg="Deactivated in site config"))
 
@@ -76,13 +72,15 @@ def gbq_active(request):
 
 @csrf_exempt
 def server_active(request):
+    """Stupid view to ping the server
+    """
+
     return JsonResponse(dict(active=True))
 
 
 urlpatterns = [
-    re_path(r'proxy/(?P<url>.*)', my_proxy_view),
-    re_path(r'proxy-merge/(?P<date_str>.*)', merge_view),
     re_path('query', query_view),
+    re_path(r'dataset/(?P<dataset_name>.*)', dataset_view),
     re_path('is_gbq_active', gbq_active),
     re_path('is_server_active', server_active)
 ]
