@@ -8,11 +8,12 @@ class StackedGraphTask(Task):
     """
 
     # Holds the task name, should be overrided in subclasses
-    task_name = "StackedGraphTask"
+    task_name = "stackedGraph"
 
     # Config
     dt_round = 'H'
     num_dom_outlets = 10
+    dom_outlets = None
 
     @classmethod
     def run(cls,
@@ -20,39 +21,56 @@ class StackedGraphTask(Task):
             events_df: pd.DataFrame,
             mentions_df: pd.DataFrame) -> Dict:
 
-        streamg_df = StackedGraphTask.process_streamgraph_data(mentions_df)
-
-        data = dict(
-            streamgraph=streamg_df.to_dict(orient='records')
-        )
-
-        return data
-
-    @classmethod
-    def process_streamgraph_data(cls, mentions_df):
-        """"""
-        mentions = mentions_df[
-            ['eventId', 'mentionDateAdded', 'mentionSourceName']] \
-            .assign(roundedMentionDate=mentions_df.mentionDateAdded
+        mentions = full_df[['eventId', 'mentionSourceName']] \
+            .assign(roundedMentionDate=full_df.mentionDateAdded
                     .dt.round(cls.dt_round)) \
-            .drop(columns={'mentionDateAdded'}) \
             .drop_duplicates()
 
-        num_other_sources = mentions \
-            .groupby(['roundedMentionDate', 'eventId']) \
+        mentions_with_tone = mentions \
+            .assign(positiveTone=full_df['mentionDocTone']
+                    - full_df['eventAvgTone'] > 0)
+
+        dates = mentions.roundedMentionDate.astype(str)
+
+        return dict(
+            dates=[dates.min(), dates.max()],
+            streamgraph=StackedGraphTask.process_streamgraph_data(mentions),
+            drilldown=StackedGraphTask.process_drilldown_data(
+                mentions_with_tone)
+        )
+
+    @staticmethod
+    def calculate_num_other_sources(mentions, with_tone=False):
+        g = ['roundedMentionDate', 'eventId']
+
+        if with_tone:
+            g.append('positiveTone')
+
+        return mentions \
+            .groupby(g) \
             .count() \
-            .apply(lambda x: x - 1) \
+            .apply(lambda x: x-1) \
             .rename(columns={'mentionSourceName': 'numOtherSources'}) \
             .reset_index()
 
-        outlet_degree = mentions \
-            .merge(num_other_sources, on=['roundedMentionDate', 'eventId']) \
-            .drop(columns={'eventId'}) \
-            .groupby(['roundedMentionDate', 'mentionSourceName']) \
-            .sum() \
-            .reset_index()
+    @staticmethod
+    def calculate_outlet_degree(mentions, num_other_sources, with_tone=False):
+        merged = mentions \
+            .merge(num_other_sources, on=['roundedMentionDate', 'eventId'])
+        d = ['eventId']
+        g = ['roundedMentionDate', 'mentionSourceName']
 
-        dom_outlets = outlet_degree \
+        if with_tone:
+            merged = merged.assign(agreeing=merged.positiveTone_x == merged
+                                   .positiveTone_y)
+            d.extend(['positiveTone_x', 'positiveTone_y'])
+            g.append('agreeing')
+
+        return merged.drop(columns=d).groupby(g).sum().reset_index()
+
+    @classmethod
+    def calculate_dom_outlets(cls, outlet_degree):
+        cls.dom_outlets = outlet_degree \
             .groupby('mentionSourceName') \
             .sum() \
             .reset_index() \
@@ -60,19 +78,59 @@ class StackedGraphTask(Task):
             .head(cls.num_dom_outlets) \
             .mentionSourceName
 
-        pivot_table = \
-            outlet_degree[outlet_degree.mentionSourceName.isin(dom_outlets)] \
-            .pivot(
-                index='roundedMentionDate',
-                columns='mentionSourceName',
-                values='numOtherSources'
-            ).fillna(0) \
+    @staticmethod
+    def prepare_pivot_table(pivot_table):
+        pivot_table = pivot_table \
+            .fillna(0) \
             .astype(int) \
             .reset_index()
 
-        stacked_graph_data = pivot_table \
+        return pivot_table \
             .assign(mentionInterval=pivot_table.roundedMentionDate
                     .astype(str)) \
-            .drop(columns={'roundedMentionDate'})
+            .drop(columns=['roundedMentionDate'])
 
-        return stacked_graph_data
+    @classmethod
+    def process_streamgraph_data(cls, mentions):
+        num_other_sources = \
+            StackedGraphTask.calculate_num_other_sources(mentions)
+        outlet_degree = \
+            StackedGraphTask.calculate_outlet_degree(mentions,
+                                                     num_other_sources)
+        StackedGraphTask.calculate_dom_outlets(outlet_degree)
+        pivot_table = \
+            outlet_degree[outlet_degree.mentionSourceName.isin(
+                cls.dom_outlets)] \
+            .pivot_table(
+                index='roundedMentionDate',
+                columns='mentionSourceName',
+                values='numOtherSources'
+            )
+
+        streamgraph_data = StackedGraphTask.prepare_pivot_table(pivot_table)
+
+        return streamgraph_data.to_dict(orient='records')
+
+    @classmethod
+    def process_drilldown_data(cls, mentions):
+        num_other_sources = \
+            StackedGraphTask.calculate_num_other_sources(mentions, True)
+        outlet_degree = \
+            StackedGraphTask.calculate_outlet_degree(mentions,
+                                                     num_other_sources,
+                                                     True)
+        pivot_table = \
+            outlet_degree[outlet_degree.mentionSourceName.isin(
+                cls.dom_outlets)] \
+            .pivot_table(
+                index=['mentionSourceName', 'roundedMentionDate'],
+                columns='agreeing',
+                values='numOtherSources'
+            )
+
+        drilldown_data = StackedGraphTask.prepare_pivot_table(pivot_table)
+
+        return drilldown_data.groupby('mentionSourceName') \
+            .apply(lambda x: x[['mentionInterval', True, False]]
+                   .to_dict(orient='records')) \
+            .to_dict()
