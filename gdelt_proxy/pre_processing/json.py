@@ -1,14 +1,16 @@
 import simplejson
 import datetime
+from numpy import int64
 
-
-def datetime_handler(x):
+def other_types_handler(x):
     if isinstance(x, datetime.datetime):
         return x.isoformat()  # TODO might need to change this
+    if isinstance(x, int64):
+        return int(x)
     raise TypeError("Unknown type")
 
 
-JSON_CONFIG = dict(ignore_nan=True, default=datetime_handler)
+JSON_CONFIG = dict(ignore_nan=True, default=other_types_handler)
 
 
 def json_dumps(content):
