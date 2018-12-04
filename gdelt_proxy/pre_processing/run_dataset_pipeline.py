@@ -17,7 +17,7 @@ from gdelt_proxy.pre_processing.json import dict_to_json_file
 
 
 # Put your new preprocessing task in the list
-TASKS = [ExTask, GraphTask, StackedGraphTask]
+TASKS = [GraphTask, StackedGraphTask]
 
 # Check the tasks are correctly set up
 test = []
