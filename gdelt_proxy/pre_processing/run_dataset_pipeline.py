@@ -8,6 +8,7 @@ from django.conf import settings
 
 from gdelt_proxy.pre_processing.ex_task import ExTask
 from gdelt_proxy.pre_processing.graph_task import GraphTask
+from gdelt_proxy.pre_processing.stacked_graph_task import StackedGraphTask
 from gdelt_proxy.pre_processing.query import (query_google_BQ,
                                               query_params_to_id)
 
@@ -16,7 +17,7 @@ from gdelt_proxy.pre_processing.json import dict_to_json_file
 
 
 # Put your new preprocessing task in the list
-TASKS = [ExTask, GraphTask]
+TASKS = [ExTask, GraphTask, StackedGraphTask]
 
 # Check the tasks are correctly set up
 test = []
