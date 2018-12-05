@@ -1,6 +1,6 @@
 import pandas as pd
 from typing import Dict
-from gdelt_proxy.pre_processing.abstract_task import Task, pandasDfToDict
+from gdelt_proxy.pre_processing.abstract_task import Task
 
 
 class StackedGraphTask(Task):
@@ -21,9 +21,12 @@ class StackedGraphTask(Task):
             events_df: pd.DataFrame,
             mentions_df: pd.DataFrame) -> Dict:
 
-        mentions = full_df[['eventId', 'mentionSourceName']] \
+        max_date = full_df.eventDateAdded.max()
+
+        mentions = full_df[full_df.mentionDateAdded <= max_date] \
+            .loc[:, ['eventId', 'mentionSourceName']] \
             .assign(roundedMentionDate=full_df.mentionDateAdded
-                    .dt.round(cls.dt_round)) \
+                    .dt.floor(cls.dt_round)) \
             .drop_duplicates()
 
         mentions_with_tone = mentions \
