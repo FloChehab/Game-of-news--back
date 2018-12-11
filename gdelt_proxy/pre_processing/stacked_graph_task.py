@@ -33,10 +33,14 @@ class StackedGraphTask(Task):
             .assign(positiveTone=full_df['mentionDocTone']
                     - full_df['eventAvgTone'] > 0)
 
-        dates = mentions.roundedMentionDate.astype(str)
+        dates = mentions.roundedMentionDate \
+            .astype(str) \
+            .sort_values() \
+            .unique() \
+            .tolist()
 
         return dict(
-            dates=[dates.min(), dates.max()],
+            dates=dates,
             streamgraph=StackedGraphTask.process_streamgraph_data(mentions),
             drilldown=StackedGraphTask.process_drilldown_data(
                 mentions_with_tone)
