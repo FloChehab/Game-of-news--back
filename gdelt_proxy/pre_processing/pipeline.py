@@ -32,6 +32,10 @@ def run_pipeline(**kwargs) -> Dict:
     else:
         full_df = query_google_BQ(**kwargs)
 
+    # Return a flag when there is actually no data to process
+    if full_df.empty:
+        return dict(empty=True)
+
     processed = run_dataset_pipeline(full_df)
 
     if settings.CACHE_PIPELINES:
