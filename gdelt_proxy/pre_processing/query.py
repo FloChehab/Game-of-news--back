@@ -6,13 +6,20 @@ DATE_END_DEFAULT = "2018-11-22T00:00:00.000Z"
 MINIMUM_DISTINCT_SOURCE_COUNT_DEFAULT = 10
 CONFIDENCE_DEFAULT = 100
 LIMIT_DEFAULT = 100000
+FILTER_MENTION_ID_DEFAULT = ""
 
 
 def query_google_BQ(date_begin=DATE_BEGIN_DEFAULT,
                     date_end=DATE_END_DEFAULT,
                     minimum_distinct_source_count=MINIMUM_DISTINCT_SOURCE_COUNT_DEFAULT,
                     confidence=CONFIDENCE_DEFAULT,
-                    limit=LIMIT_DEFAULT) -> pd.DataFrame:
+                    limit=LIMIT_DEFAULT,
+                    filterMentionId=FILTER_MENTION_ID_DEFAULT) -> pd.DataFrame:
+
+    filterMentionIdStr = ""
+    if filterMentionId != "":
+        filterMentionIdStr = 'AND REGEXP_CONTAINS(MentionIdentifier, r"{}")'.format(
+            filterMentionId)
 
     sql_query = """
     WITH
@@ -43,7 +50,9 @@ def query_google_BQ(date_begin=DATE_BEGIN_DEFAULT,
         WHERE
             _PARTITIONTIME >= "{date_begin}"
             AND _PARTITIONTIME < "{date_end}"
-            AND Confidence >= {confidence} ),
+            AND Confidence >= {confidence}
+            {filterMentionId}
+    ),
     # We focus on events that have been shared by a minimum number of different sources
     bestEvents AS (
         SELECT
@@ -97,7 +106,8 @@ def query_google_BQ(date_begin=DATE_BEGIN_DEFAULT,
                date_end=date_end,
                minimum_distinct_source_count=minimum_distinct_source_count,
                confidence=confidence,
-               limit=limit)
+               limit=limit,
+               filterMentionId=filterMentionIdStr)
 
     client = bigquery.Client()
     query_job = client.query(sql_query)
@@ -109,9 +119,11 @@ def query_params_to_id(date_begin=DATE_BEGIN_DEFAULT,
                        date_end=DATE_END_DEFAULT,
                        minimum_distinct_source_count=MINIMUM_DISTINCT_SOURCE_COUNT_DEFAULT,
                        confidence=CONFIDENCE_DEFAULT,
-                       limit=LIMIT_DEFAULT) -> str:
-    return "{db}|{de}|{mdsc}|{conf}|{limit}".format(db=date_begin,
-                                                    de=date_end,
-                                                    mdsc=minimum_distinct_source_count,
-                                                    conf=confidence,
-                                                    limit=limit)
+                       limit=LIMIT_DEFAULT,
+                       filterMentionId=FILTER_MENTION_ID_DEFAULT) -> str:
+    return "{db}|{de}|{mdsc}|{conf}|{limit}|{fmi}".format(db=date_begin,
+                                                          de=date_end,
+                                                          mdsc=minimum_distinct_source_count,
+                                                          conf=confidence,
+                                                          limit=limit,
+                                                          fmi=filterMentionId)
