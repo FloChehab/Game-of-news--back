@@ -18,21 +18,32 @@ def query_google_BQ(date_begin=DATE_BEGIN_DEFAULT,
 
     filterMentionIdStr = ""
     if filterMentionId != "":
-        filterMentionIdStr = 'AND REGEXP_CONTAINS(MentionIdentifier, r"{}")'.format(
+        filterMentionIdStr = 'WHERE REGEXP_CONTAINS(MentionIdentifier, r"{}")'.format(
             filterMentionId)
 
     sql_query = """
     WITH
+    # Filterd mentions
+    mentionsFiltered AS (
+        SELECT DISTINCT
+            GLOBALEVENTID 
+        FROM
+            `gdelt-bq.gdeltv2.eventmentions_partitioned`
+        {filterMentionId}),
     # events contains the interesting fields from the events table
     events AS (
         SELECT
-            GLOBALEVENTID,
+            A.GLOBALEVENTID AS GLOBALEVENTID,
             DATEADDED,
             Actor1Name,
             Actor2Name,
             GoldsteinScale
         FROM
-            `gdelt-bq.gdeltv2.events_partitioned`
+            `gdelt-bq.gdeltv2.events_partitioned` A
+        INNER JOIN
+            mentionsFiltered B
+        ON
+            A.GLOBALEVENTID = B.GLOBALEVENTID
         WHERE
             _PARTITIONTIME >= "{date_begin}"
             AND _PARTITIONTIME < "{date_end}"),
@@ -51,7 +62,6 @@ def query_google_BQ(date_begin=DATE_BEGIN_DEFAULT,
             _PARTITIONTIME >= "{date_begin}"
             AND _PARTITIONTIME < "{date_end}"
             AND Confidence >= {confidence}
-            {filterMentionId}
     ),
     # We focus on events that have been shared by a minimum number of different sources
     bestEvents AS (
