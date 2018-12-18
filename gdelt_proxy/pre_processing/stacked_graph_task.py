@@ -23,7 +23,11 @@ class StackedGraphTask(Task):
 
         max_date = full_df.eventDateAdded.max()
 
-        mentions = full_df[full_df.mentionDateAdded <= max_date] \
+        mentions = full_df \
+            .drop(columns=['mentionSourceName']) \
+            .assign(mentionSourceName=full_df.mentionSourceName.str
+                    .split('.', n=1, expand=True).iloc[:, 0]) \
+            .loc[full_df.mentionDateAdded <= max_date] \
             .loc[:, ['eventId', 'mentionSourceName']] \
             .assign(roundedMentionDate=full_df.mentionDateAdded
                     .dt.floor(cls.dt_round)) \
