@@ -125,6 +125,17 @@ class GraphTask(Task):
         other['maxToneDist'] = tmp.meanToneDist.max()
         other['maxSharedEventsCount'] = tmp.eventsSharedCount.max()
 
+        # Compute aggregated values on nodes
+        nodes = mentions_filtered.groupby(by='mentionSourceName') \
+            .agg([np.ma.count, np.mean], axis=1) \
+            .reset_index() \
+            .set_index('mentionSourceName')[['avgTone']]
+
+        nodes.columns = ['sharedCount', 'avgTone']
+        nodes = nodes.sort_values(by='sharedCount', ascending=False)
+        nodes.avgTone = nodes.avgTone.round(2)  # Size optimization
+        nodes.sharedCount = nodes.sharedCount.astype(int)
+
         return dict(edgesData=final,
-                    nodes=top_sources.to_dict(),
+                    nodes=nodes.to_dict('index'),
                     other=other)
