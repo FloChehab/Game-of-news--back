@@ -86,8 +86,10 @@ class GraphTask(Task):
                 final[source1] = dict()
             if source2 not in final[source1].keys():
                 final[source1][source2] = dict()
+            if 'events' not in final[source1][source2]:
+                final[source1][source2]['events'] = dict()
 
-            final[source1][source2][eventId] = dict(
+            final[source1][source2]['events'][eventId] = dict(
                 avgTone1=avgTone1,
                 avgTone2=avgTone2,
                 url1=url1,
