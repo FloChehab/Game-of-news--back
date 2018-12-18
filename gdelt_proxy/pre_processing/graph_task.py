@@ -3,7 +3,7 @@ from typing import Dict
 from gdelt_proxy.pre_processing.abstract_task import Task, pandasDfToDict
 import numpy as np
 
-NB_SITES = 70
+NB_SITES = 40
 
 
 class GraphTask(Task):
@@ -27,6 +27,7 @@ class GraphTask(Task):
             .mean() \
             .rename(columns={'mentionDocTone': 'avgTone'}) \
             .reset_index()
+
         # reduce data size
         mentions_cleaned.avgTone = mentions_cleaned.avgTone.round(2)
 
@@ -35,6 +36,15 @@ class GraphTask(Task):
 
         mentions_filtered = mentions_cleaned[mentions_cleaned.mentionSourceName.isin(
             top_sources.index)]
+
+        # retreive the first url
+        mentions_with_first_url = mentions_df[cols + ['mentionIdentifier']] \
+            .groupby(by=cols) \
+            .first() \
+            .reset_index()
+
+        mentions_filtered = mentions_filtered.merge(
+            mentions_with_first_url, on=cols)
 
         # nasty cross product, yes.
         mentions_cross = mentions_filtered.merge(
@@ -70,12 +80,18 @@ class GraphTask(Task):
             source2 = r.mentionSourceName_y
             avgTone1 = r.avgTone_x
             avgTone2 = r.avgTone_y
+            url1 = r.mentionIdentifier_x
+            url2 = r.mentionIdentifier_y
             if source1 not in final.keys():
                 final[source1] = dict()
             if source2 not in final[source1].keys():
                 final[source1][source2] = dict()
 
-            final[source1][source2][eventId] = [avgTone1, avgTone2]
+            final[source1][source2][eventId] = dict(
+                avgTone1=avgTone1,
+                avgTone2=avgTone2,
+                url1=url1,
+                url2=url2)
 
         # Now we can store the average tone also
 
@@ -109,6 +125,17 @@ class GraphTask(Task):
         other['maxToneDist'] = tmp.meanToneDist.max()
         other['maxSharedEventsCount'] = tmp.eventsSharedCount.max()
 
+        # Compute aggregated values on nodes
+        nodes = mentions_filtered.groupby(by='mentionSourceName') \
+            .agg([np.ma.count, np.mean], axis=1) \
+            .reset_index() \
+            .set_index('mentionSourceName')[['avgTone']]
+
+        nodes.columns = ['mentionnedEventsCount', 'avgTone']
+        nodes = nodes.sort_values(by='mentionnedEventsCount', ascending=False)
+        nodes.avgTone = nodes.avgTone.round(2)  # Size optimization
+        nodes.mentionnedEventsCount = nodes.mentionnedEventsCount.astype(int)
+
         return dict(edgesData=final,
-                    nodes=top_sources.to_dict(),
+                    nodes=nodes.to_dict('index'),
                     other=other)
