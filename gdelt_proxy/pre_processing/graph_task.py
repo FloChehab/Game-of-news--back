@@ -131,10 +131,10 @@ class GraphTask(Task):
             .reset_index() \
             .set_index('mentionSourceName')[['avgTone']]
 
-        nodes.columns = ['sharedCount', 'avgTone']
-        nodes = nodes.sort_values(by='sharedCount', ascending=False)
+        nodes.columns = ['mentionnedEventsCount', 'avgTone']
+        nodes = nodes.sort_values(by='mentionnedEventsCount', ascending=False)
         nodes.avgTone = nodes.avgTone.round(2)  # Size optimization
-        nodes.sharedCount = nodes.sharedCount.astype(int)
+        nodes.mentionnedEventsCount = nodes.mentionnedEventsCount.astype(int)
 
         return dict(edgesData=final,
                     nodes=nodes.to_dict('index'),
