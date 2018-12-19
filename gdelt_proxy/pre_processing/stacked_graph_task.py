@@ -52,9 +52,9 @@ class StackedGraphTask(Task):
 
 
 class StackedComputation(object):
+    num_dom_outlets = 10
+
     def __init__(self):
-        # Config
-        self.num_dom_outlets = 10
         self.dom_outlets = None
 
     @staticmethod
@@ -86,14 +86,14 @@ class StackedComputation(object):
 
         return merged.drop(columns=d).groupby(g).sum().reset_index()
 
-    def calculate_dom_outlets(self, outlet_degree):
-        self.dom_outlets = outlet_degree \
-            .groupby('mentionSourceName') \
-            .sum() \
-            .reset_index() \
-            .sort_values(by='numOtherSources', ascending=False) \
+    def calculate_dom_outlets(self, mentions):
+        cols = ['eventId', 'mentionSourceName']
+        self.dom_outlets = mentions[cols] \
+            .drop_duplicates() \
+            .mentionSourceName \
+            .value_counts() \
             .head(self.num_dom_outlets) \
-            .mentionSourceName
+            .index
 
     @staticmethod
     def prepare_pivot_table(pivot_table):
@@ -111,8 +111,8 @@ class StackedComputation(object):
             self.calculate_num_other_sources(mentions)
         outlet_degree = \
             self.calculate_outlet_degree(mentions,
-                                                     num_other_sources)
-        self.calculate_dom_outlets(outlet_degree)
+                                         num_other_sources)
+        self.calculate_dom_outlets(mentions)
         pivot_table = \
             outlet_degree[outlet_degree.mentionSourceName.isin(
                 self.dom_outlets)] \
@@ -131,8 +131,8 @@ class StackedComputation(object):
             self.calculate_num_other_sources(mentions, True)
         outlet_degree = \
             self.calculate_outlet_degree(mentions,
-                                                     num_other_sources,
-                                                     True)
+                                         num_other_sources,
+                                         True)
         pivot_table = \
             outlet_degree[outlet_degree.mentionSourceName.isin(
                 self.dom_outlets)] \
