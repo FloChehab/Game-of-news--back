@@ -10,16 +10,16 @@ class StackedGraphTask(Task):
     # Holds the task name, should be overrided in subclasses
     task_name = "stackedGraph"
 
-    # Config
+    # config
     dt_round = 'H'
-    num_dom_outlets = 10
-    dom_outlets = None
 
     @classmethod
     def run(cls,
             full_df: pd.DataFrame,
             events_df: pd.DataFrame,
             mentions_df: pd.DataFrame) -> Dict:
+
+        compute = StackedComputation()
 
         max_date = full_df.eventDateAdded.max()
 
@@ -45,10 +45,17 @@ class StackedGraphTask(Task):
 
         return dict(
             dates=list(map(lambda d: d+"Z", dates)),
-            streamgraph=StackedGraphTask.process_streamgraph_data(mentions),
-            drilldown=StackedGraphTask.process_drilldown_data(
+            streamgraph=compute.process_streamgraph_data(mentions),
+            drilldown=compute.process_drilldown_data(
                 mentions_with_tone)
         )
+
+
+class StackedComputation(object):
+    num_dom_outlets = 10
+
+    def __init__(self):
+        self.dom_outlets = None
 
     @staticmethod
     def calculate_num_other_sources(mentions, with_tone=False):
@@ -79,15 +86,14 @@ class StackedGraphTask(Task):
 
         return merged.drop(columns=d).groupby(g).sum().reset_index()
 
-    @classmethod
-    def calculate_dom_outlets(cls, outlet_degree):
-        cls.dom_outlets = outlet_degree \
-            .groupby('mentionSourceName') \
-            .sum() \
-            .reset_index() \
-            .sort_values(by='numOtherSources', ascending=False) \
-            .head(cls.num_dom_outlets) \
-            .mentionSourceName
+    def calculate_dom_outlets(self, mentions):
+        cols = ['eventId', 'mentionSourceName']
+        self.dom_outlets = mentions[cols] \
+            .drop_duplicates() \
+            .mentionSourceName \
+            .value_counts() \
+            .head(self.num_dom_outlets) \
+            .index
 
     @staticmethod
     def prepare_pivot_table(pivot_table):
@@ -100,45 +106,43 @@ class StackedGraphTask(Task):
             .assign(mentionInterval=pivot_table.roundedMentionDate) \
             .drop(columns=['roundedMentionDate'])
 
-    @classmethod
-    def process_streamgraph_data(cls, mentions):
+    def process_streamgraph_data(self, mentions):
         num_other_sources = \
-            StackedGraphTask.calculate_num_other_sources(mentions)
+            self.calculate_num_other_sources(mentions)
         outlet_degree = \
-            StackedGraphTask.calculate_outlet_degree(mentions,
-                                                     num_other_sources)
-        StackedGraphTask.calculate_dom_outlets(outlet_degree)
+            self.calculate_outlet_degree(mentions,
+                                         num_other_sources)
+        self.calculate_dom_outlets(mentions)
         pivot_table = \
             outlet_degree[outlet_degree.mentionSourceName.isin(
-                cls.dom_outlets)] \
+                self.dom_outlets)] \
             .pivot_table(
                 index='roundedMentionDate',
                 columns='mentionSourceName',
                 values='numOtherSources'
             )
 
-        streamgraph_data = StackedGraphTask.prepare_pivot_table(pivot_table)
+        streamgraph_data = self.prepare_pivot_table(pivot_table)
 
         return streamgraph_data.to_dict(orient='records')
 
-    @classmethod
-    def process_drilldown_data(cls, mentions):
+    def process_drilldown_data(self, mentions):
         num_other_sources = \
-            StackedGraphTask.calculate_num_other_sources(mentions, True)
+            self.calculate_num_other_sources(mentions, True)
         outlet_degree = \
-            StackedGraphTask.calculate_outlet_degree(mentions,
-                                                     num_other_sources,
-                                                     True)
+            self.calculate_outlet_degree(mentions,
+                                         num_other_sources,
+                                         True)
         pivot_table = \
             outlet_degree[outlet_degree.mentionSourceName.isin(
-                cls.dom_outlets)] \
+                self.dom_outlets)] \
             .pivot_table(
                 index=['mentionSourceName', 'roundedMentionDate'],
                 columns='agreeing',
                 values='numOtherSources'
             )
 
-        drilldown_data = StackedGraphTask.prepare_pivot_table(pivot_table)
+        drilldown_data = self.prepare_pivot_table(pivot_table)
 
         return drilldown_data.groupby('mentionSourceName') \
             .apply(lambda x: x[['mentionInterval', True, False]]
