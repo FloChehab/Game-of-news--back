@@ -44,7 +44,7 @@ class StackedGraphTask(Task):
             .tolist()
 
         return dict(
-            dates=dates,
+            dates=list(map(lambda d: d+"Z", dates)),
             streamgraph=StackedGraphTask.process_streamgraph_data(mentions),
             drilldown=StackedGraphTask.process_drilldown_data(
                 mentions_with_tone)
@@ -97,8 +97,7 @@ class StackedGraphTask(Task):
             .reset_index()
 
         return pivot_table \
-            .assign(mentionInterval=pivot_table.roundedMentionDate
-                    .astype(str)) \
+            .assign(mentionInterval=pivot_table.roundedMentionDate) \
             .drop(columns=['roundedMentionDate'])
 
     @classmethod

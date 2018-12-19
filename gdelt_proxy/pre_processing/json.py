@@ -4,7 +4,7 @@ from numpy import int64
 
 def other_types_handler(x):
     if isinstance(x, datetime.datetime):
-        return x.isoformat()  # TODO might need to change this
+        return x.isoformat() + "Z"
     if isinstance(x, int64):
         return int(x)
     raise TypeError("Unknown type")
