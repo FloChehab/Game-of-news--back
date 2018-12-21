@@ -20,15 +20,6 @@ cached_queries_pipelines = join(dir_path, 'cached_queries_pipelines')
 datasets_pipelines = join(dir_path, 'datasets_pipelines')
 
 
-def set_up_datasets_dirs():
-    call(['wget', '-O', datesets_zip,
-          'https://cloud.floflo.ch/index.php/s/LZ9ef7tJXwpyMHt/download'])
-    call(['unzip', datesets_zip])
-    if not exists(datasets_pipelines):
-        mkdir(datasets_pipelines)
-    genereate_pipeline_dataset()
-
-
 def genereate_pipeline_dataset():
     for file in listdir(datasets_dir):
         full_df = pd.read_csv(join(datasets_dir, file))
@@ -38,8 +29,6 @@ def genereate_pipeline_dataset():
 
 
 def init():
-    if not exists(datasets_dir):
-        set_up_datasets_dirs()
     if not exists(cached_queries_pipelines):
         mkdir(cached_queries_pipelines)
 
@@ -51,7 +40,6 @@ def empty_cache():
 
 def reset_all():
     empty_cache()
-    shutil.rmtree(datasets_dir)
     init()
 
 
